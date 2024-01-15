@@ -10,7 +10,9 @@ Inspired by [Local Search Engine in Rust](https://github.com/tsoding/seroost) fr
 
 3. [✅] Write code for loading `TermFrequenciesIndex` from the [SQLite3](https://www.sqlite.org/index.html) DB.
 
-4. [TODO] Write code for adding subcommands for-
+4. [🟨] Write code for answering query using the index. Have to use [TF-IDF](https://en.wikipedia.org/wiki/Tf%E2%80%93idf) algorithm for this somehow.
+
+5. [🟨] Write code for adding subcommands for-
     1. Indexing a folder and storing it in [SQLite3](https://www.sqlite.org/index.html) DB.
     ```console
     --index --folder --db
