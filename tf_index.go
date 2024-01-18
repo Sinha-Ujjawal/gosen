@@ -30,7 +30,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			filePath            STRING  NOT NULL,
 			token               TEXT    NOT NULL,
 			frequency           INTEGER NOT NULL,
-			inverseDocFrequency INTEGER NOT NULL
+			docFrequency INTEGER NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
 	`)
@@ -42,7 +42,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	const BatchSize = 333
 	flushToDB := func() error {
 		stmt := fmt.Sprintf(`
-			INSERT INTO termFrequenciesIndex (filePath, token, frequency, inverseDocFrequency) VALUES %s
+			INSERT INTO termFrequenciesIndex (filePath, token, frequency, docFrequency) VALUES %s
 			ON CONFLICT(filePath, token) DO UPDATE SET
 				frequency = excluded.frequency
 			`,
@@ -77,26 +77,26 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 		}
 	}
 	updateInverseDocFreqQuery := `
-		WITH inverseDocFrequencyByToken AS (
+		WITH docFrequencyByToken AS (
 			SELECT
 				token,
-				COUNT(DISTINCT filePath) inverseDocFrequency
+				COUNT(DISTINCT filePath) docFrequency
 			FROM termFrequenciesIndex
 			GROUP BY
 				token
-			ORDER BY inverseDocFrequency ASC
+			ORDER BY docFrequency ASC
 		)
 		UPDATE termFrequenciesIndex
-		SET inverseDocFrequency = (
-			SELECT inverseDocFrequency
-			FROM inverseDocFrequencyByToken
+		SET docFrequency = (
+			SELECT docFrequency
+			FROM docFrequencyByToken
 			WHERE token = termFrequenciesIndex.token
 		)
 		;
 	`
 	_, err = db.Exec(updateInverseDocFreqQuery)
 	if err != nil {
-		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot refresh the inverseDocFrequency using the query `%s`: %w", updateInverseDocFreqQuery, err)
+		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot refresh the docFrequency using the query `%s`: %w", updateInverseDocFreqQuery, err)
 	}
 	return nil
 }
@@ -116,8 +116,8 @@ func LoadTermFrequenciesIndexFromSQLite3(dbPath string) (*TermFrequenciesIndex, 
 		var filePath string = ""
 		var token string = ""
 		var frequency uint = 0
-		var inverseDocFrequency uint = 0
-		err = rows.Scan(&filePath, &token, &frequency, &inverseDocFrequency)
+		var docFrequency uint = 0
+		err = rows.Scan(&filePath, &token, &frequency, &docFrequency)
 		if err != nil {
 			return nil, fmt.Errorf("LoadTermFrequenciesIndexFromSQLite3 cannot parse the rows into filePath string, token string, freq uint: %w", err)
 		}
@@ -128,7 +128,7 @@ func LoadTermFrequenciesIndexFromSQLite3(dbPath string) (*TermFrequenciesIndex, 
 		}
 		tf[token] = &Freq{
 			frequency,
-			inverseDocFrequency,
+			docFrequency,
 		}
 	}
 	return &TermFrequenciesIndex{tfs}, nil

@@ -3,8 +3,8 @@ package main
 import "strings"
 
 type Freq struct {
-	frequency           uint
-	inverseDocFrequency uint
+	frequency    uint
+	docFrequency uint
 }
 
 type TermFrequencies = map[string]*Freq
@@ -20,8 +20,8 @@ func (fileContent FileContent) TermFrequencies() TermFrequencies {
 			freq, ok := termFrequencies[key]
 			if !ok {
 				freq = &Freq{
-					frequency:           0,
-					inverseDocFrequency: 1,
+					frequency:    0,
+					docFrequency: 1,
 				}
 				termFrequencies[key] = freq
 			}
