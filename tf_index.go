@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type TermFrequenciesIndex struct {
@@ -30,7 +32,9 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			filePath            STRING  NOT NULL,
 			token               TEXT    NOT NULL,
 			frequency           INTEGER NOT NULL,
-			docFrequency INTEGER NOT NULL
+			docFrequency        INTEGER,
+			totalDocuments      INTEGER,
+			inverseDocFrequency DOUBLE
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
 	`)
@@ -42,7 +46,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	const BatchSize = 333
 	flushToDB := func() error {
 		stmt := fmt.Sprintf(`
-			INSERT INTO termFrequenciesIndex (filePath, token, frequency, docFrequency) VALUES %s
+			INSERT INTO termFrequenciesIndex (filePath, token, frequency) VALUES %s
 			ON CONFLICT(filePath, token) DO UPDATE SET
 				frequency = excluded.frequency
 			`,
@@ -57,11 +61,10 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	}
 	for filePath, tf := range tfIndex.tfs {
 		for term, freq := range tf {
-			valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+			valueStrings = append(valueStrings, "(?, ?, ?)")
 			valueArgs = append(valueArgs, filePath)
 			valueArgs = append(valueArgs, term)
 			valueArgs = append(valueArgs, freq.frequency)
-			valueArgs = append(valueArgs, 0)
 			if len(valueStrings) == BatchSize {
 				if err := flushToDB(); err != nil {
 					return err
@@ -76,7 +79,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			return err
 		}
 	}
-	updateInverseDocFreqQuery := `
+	updateStats := `
 		WITH docFrequencyByToken AS (
 			SELECT
 				token,
@@ -87,16 +90,25 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			ORDER BY docFrequency ASC
 		)
 		UPDATE termFrequenciesIndex
-		SET docFrequency = (
-			SELECT docFrequency
-			FROM docFrequencyByToken
-			WHERE token = termFrequenciesIndex.token
-		)
+		SET
+			docFrequency = (
+				SELECT docFrequency
+				FROM docFrequencyByToken
+				WHERE token = termFrequenciesIndex.token
+			),
+			totalDocuments = (
+				SELECT COUNT(DISTINCT filePath)
+				FROM termFrequenciesIndex
+			)
+		;
+		UPDATE termFrequenciesIndex
+		SET
+			inverseDocFrequency = LN(totalDocuments / docFrequency)
 		;
 	`
-	_, err = db.Exec(updateInverseDocFreqQuery)
+	_, err = db.Exec(updateStats)
 	if err != nil {
-		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot refresh the docFrequency using the query `%s`: %w", updateInverseDocFreqQuery, err)
+		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot refresh the stats using the query `%s`: %w", updateStats, err)
 	}
 	return nil
 }
