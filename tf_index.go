@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,28 +14,46 @@ type TermFrequenciesIndex struct {
 }
 
 func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
-	if _, err := os.Stat(dbPath); err == nil {
-		err = os.Remove(dbPath)
+	if _, err := os.Stat(dbPath); err != nil {
+		_, err := os.Create(dbPath)
 		if err != nil {
-			return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot remove the file %s: %w", dbPath, err)
+			return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot create the file %s: %w", dbPath, err)
 		}
-	}
-	_, err := os.Create(dbPath)
-	if err != nil {
-		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot create the file %s: %w", dbPath, err)
 	}
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot connect to db %s: %w", dbPath, err)
 	}
 	defer db.Close()
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS termFrequenciesIndex (filePath STRING NOT NULL, token STRING NOT NULL, frequency INTEGER NOT NULL);")
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS termFrequenciesIndex (
+			filePath STRING NOT NULL,
+			token STRING NOT NULL,
+			frequency INTEGER NOT NULL
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
+	`)
 	if err != nil {
 		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot create the table: %w", err)
 	}
 	var valueStrings []string
 	var valueArgs []any
 	const BatchSize = 333
+	flushToDB := func() error {
+		stmt := fmt.Sprintf(`
+			INSERT INTO termFrequenciesIndex (filePath, token, frequency) VALUES %s
+			ON CONFLICT(filePath, token) DO UPDATE SET
+				frequency = excluded.frequency
+			`,
+			strings.Join(valueStrings, ","),
+		)
+		_, err = db.Exec(stmt, valueArgs...)
+		if err != nil {
+			valueArgsAsJSON, _ := json.Marshal(valueArgs)
+			return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot execute the statement `%s`, valueArgs: %s: %w", stmt, valueArgsAsJSON, err)
+		}
+		return nil
+	}
 	for filePath, tf := range tfIndex.tfs {
 		for term, freq := range tf {
 			valueStrings = append(valueStrings, "(?, ?, ?)")
@@ -42,10 +61,8 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			valueArgs = append(valueArgs, term)
 			valueArgs = append(valueArgs, freq)
 			if len(valueStrings) == BatchSize {
-				stmt := fmt.Sprintf("INSERT INTO termFrequenciesIndex (filePath, token, frequency) VALUES %s", strings.Join(valueStrings, ","))
-				_, err = db.Exec(stmt, valueArgs...)
-				if err != nil {
-					return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot execute the statement: %w", err)
+				if err := flushToDB(); err != nil {
+					return err
 				}
 				valueStrings = nil
 				valueArgs = nil
@@ -53,10 +70,8 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 		}
 	}
 	if len(valueStrings) > 0 {
-		stmt := fmt.Sprintf("INSERT INTO termFrequenciesIndex (filePath, token, frequency) VALUES %s", strings.Join(valueStrings, ","))
-		_, err = db.Exec(stmt, valueArgs...)
-		if err != nil {
-			return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot execute the statement: %w", err)
+		if err := flushToDB(); err != nil {
+			return err
 		}
 	}
 	return nil
