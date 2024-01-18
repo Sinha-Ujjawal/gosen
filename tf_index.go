@@ -27,8 +27,8 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	defer db.Close()
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS termFrequenciesIndex (
-			filePath STRING NOT NULL,
-			token STRING NOT NULL,
+			filePath  STRING  NOT NULL,
+			token     TEXT    NOT NULL,
 			frequency INTEGER NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
