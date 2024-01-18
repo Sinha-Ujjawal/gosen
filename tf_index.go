@@ -27,9 +27,10 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	defer db.Close()
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS termFrequenciesIndex (
-			filePath  STRING  NOT NULL,
-			token     TEXT    NOT NULL,
-			frequency INTEGER NOT NULL
+			filePath            STRING  NOT NULL,
+			token               TEXT    NOT NULL,
+			frequency           INTEGER NOT NULL,
+			inverseDocFrequency INTEGER NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
 	`)
@@ -41,7 +42,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	const BatchSize = 333
 	flushToDB := func() error {
 		stmt := fmt.Sprintf(`
-			INSERT INTO termFrequenciesIndex (filePath, token, frequency) VALUES %s
+			INSERT INTO termFrequenciesIndex (filePath, token, frequency, inverseDocFrequency) VALUES %s
 			ON CONFLICT(filePath, token) DO UPDATE SET
 				frequency = excluded.frequency
 			`,
@@ -56,10 +57,11 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 	}
 	for filePath, tf := range tfIndex.tfs {
 		for term, freq := range tf {
-			valueStrings = append(valueStrings, "(?, ?, ?)")
+			valueStrings = append(valueStrings, "(?, ?, ?, ?)")
 			valueArgs = append(valueArgs, filePath)
 			valueArgs = append(valueArgs, term)
 			valueArgs = append(valueArgs, freq)
+			valueArgs = append(valueArgs, 0)
 			if len(valueStrings) == BatchSize {
 				if err := flushToDB(); err != nil {
 					return err
@@ -73,6 +75,28 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 		if err := flushToDB(); err != nil {
 			return err
 		}
+	}
+	updateInverseDocFreqQuery := `
+		WITH inverseDocFrequencyByToken AS (
+			SELECT
+				token,
+				COUNT(DISTINCT filePath) inverseDocFrequency
+			FROM termFrequenciesIndex
+			GROUP BY
+				token
+			ORDER BY inverseDocFrequency ASC
+		)
+		UPDATE termFrequenciesIndex
+		SET inverseDocFrequency = (
+			SELECT inverseDocFrequency
+			FROM inverseDocFrequencyByToken
+			WHERE token = termFrequenciesIndex.token
+		)
+		;
+	`
+	_, err = db.Exec(updateInverseDocFreqQuery)
+	if err != nil {
+		return fmt.Errorf("TermFrequenciesIndex.DumpToSQLite3 cannot refresh the inverseDocFrequency using the query `%s`: %w", updateInverseDocFreqQuery, err)
 	}
 	return nil
 }
@@ -91,8 +115,9 @@ func LoadTermFrequenciesIndexFromSQLite3(dbPath string) (*TermFrequenciesIndex, 
 	for rows.Next() {
 		var filePath string = ""
 		var token string = ""
-		var freq uint = 0
-		err = rows.Scan(&filePath, &token, &freq)
+		var frequency uint = 0
+		var inverseDocFrequency uint = 0
+		err = rows.Scan(&filePath, &token, &frequency, &inverseDocFrequency)
 		if err != nil {
 			return nil, fmt.Errorf("LoadTermFrequenciesIndexFromSQLite3 cannot parse the rows into filePath string, token string, freq uint: %w", err)
 		}
@@ -101,7 +126,10 @@ func LoadTermFrequenciesIndexFromSQLite3(dbPath string) (*TermFrequenciesIndex, 
 			tfs[filePath] = TermFrequencies{}
 			tf = tfs[filePath]
 		}
-		tf[token] = freq
+		tf[token] = Freq{
+			frequency,
+			inverseDocFrequency,
+		}
 	}
 	return &TermFrequenciesIndex{tfs}, nil
 }
