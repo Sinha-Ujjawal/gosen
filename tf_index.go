@@ -60,7 +60,7 @@ func (tfIndex *TermFrequenciesIndex) DumpToSQLite3(dbPath string) error {
 			valueStrings = append(valueStrings, "(?, ?, ?, ?)")
 			valueArgs = append(valueArgs, filePath)
 			valueArgs = append(valueArgs, term)
-			valueArgs = append(valueArgs, freq)
+			valueArgs = append(valueArgs, freq.frequency)
 			valueArgs = append(valueArgs, 0)
 			if len(valueStrings) == BatchSize {
 				if err := flushToDB(); err != nil {
@@ -126,7 +126,7 @@ func LoadTermFrequenciesIndexFromSQLite3(dbPath string) (*TermFrequenciesIndex, 
 			tfs[filePath] = TermFrequencies{}
 			tf = tfs[filePath]
 		}
-		tf[token] = Freq{
+		tf[token] = &Freq{
 			frequency,
 			inverseDocFrequency,
 		}

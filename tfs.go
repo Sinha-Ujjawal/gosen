@@ -7,22 +7,23 @@ type Freq struct {
 	inverseDocFrequency uint
 }
 
-type TermFrequencies = map[string]Freq
+type TermFrequencies = map[string]*Freq
 
 // Returns the term frequencies for the texts inside the file
 func (fileContent FileContent) TermFrequencies() TermFrequencies {
-	termFrequencies := map[string]Freq{}
+	termFrequencies := TermFrequencies{}
 	lexer := &Lexer{[]rune(fileContent.content)}
 	for lexer.Contains() {
 		token := lexer.NextToken()
 		if token != nil {
-			freq, ok := termFrequencies[strings.ToUpper(string(token))]
+			key := strings.ToUpper(string(token))
+			freq, ok := termFrequencies[key]
 			if !ok {
-				freq = Freq{
+				freq = &Freq{
 					frequency:           0,
 					inverseDocFrequency: 1,
 				}
-				termFrequencies[strings.ToUpper(string(token))] = freq
+				termFrequencies[key] = freq
 			}
 			freq.frequency += 1
 		} else {
