@@ -150,7 +150,7 @@ func main() {
 		}
 		defaultLogger.Printf("Top %d results for the query: `%s`:\n", topN, query)
 		for _, result := range results {
-			defaultLogger.Printf("Doc: `%s`,\tScore: %.2f\n", result.DocID, result.Score)
+			defaultLogger.Printf("Score: %.2f, Doc: `%s`\n", result.Score, result.DocID)
 		}
 	default:
 		fmt.Printf("Unknown subcommand `%s`\n", subcommand)
