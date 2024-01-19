@@ -24,43 +24,72 @@ func (h *TextHandler) CharData(c xml.CharData) {
 }
 
 func FileContentFromFilePath(filePath string) (string, error) {
-	fp, err := os.Open(filePath)
-	if err != nil {
-		return "", fmt.Errorf("FileContentFromFilePath: failed reading the filePath %s: %w", filePath, err)
+	parts := strings.Split(filePath, ".")
+	ext := parts[len(parts)-1]
+	switch ext {
+	case "xhtml", "html", "xml", "svg":
+		fp, err := os.Open(filePath)
+		if err != nil {
+			return "", fmt.Errorf("FileContentFromFilePath: failed reading the filePath %s: %w", filePath, err)
+		}
+		reader := bufio.NewReader(fp)
+		handler := &TextHandler{}
+		parser := saxlike.NewParser(reader, handler)
+		err = parser.Parse()
+		if err != nil {
+			return "", fmt.Errorf("FileContentFromFilePath: failed parsing the file %s using saxlike: %w", filePath, err)
+		}
+		return handler.textDataSB.String(), nil
+	default:
+		bytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return "", fmt.Errorf("FileContentFromFilePath: failed reading the filePath %s: %w", filePath, err)
+		}
+		return string(bytes), nil
 	}
-	reader := bufio.NewReader(fp)
-	handler := &TextHandler{}
-	parser := saxlike.NewParser(reader, handler)
-	err = parser.Parse()
-	if err != nil {
-		return "", fmt.Errorf("FileContentFromFilePath: failed parsing the file %s using saxlike: %w", filePath, err)
-	}
-	return handler.textDataSB.String(), nil
+}
+
+func ListFiles(directory string) ([]string, error) {
+	var files []string
+
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			files = append(files, path)
+		}
+		return nil
+	})
+
+	return files, err
 }
 
 func FileContentsFromDirectory(dirPath string) (map[string]string, []error) {
-	files, err := filepath.Glob(dirPath + "/*/*.xhtml")
+	files, err := ListFiles(dirPath)
 	if err != nil {
-		return nil, []error{fmt.Errorf("FileContentsFromDirectory: failed reading .xhtml files from the directory %s: %w", dirPath, err)}
+		return nil, []error{fmt.Errorf("FileContentsFromDirectory: failed reading files from the directory %s: %w", dirPath, err)}
 	}
 	fileContents := map[string]string{}
 	var errs []error
 	lock := sync.Mutex{}
 	wg := sync.WaitGroup{}
-	wg.Add(len(files))
 	for _, filePath := range files {
 		filePath, _ := filepath.Abs(filePath)
-		go func(filePath string) {
-			defer wg.Done()
-			fileContent, err := FileContentFromFilePath(filePath)
-			lock.Lock()
-			defer lock.Unlock()
-			if err != nil {
-				errs = append(errs, err)
-			} else {
-				fileContents[filePath] = fileContent
-			}
-		}(filePath)
+		if fi, _ := os.Stat(filePath); fi.Mode().IsRegular() {
+			wg.Add(1)
+			go func(filePath string) {
+				defer wg.Done()
+				fileContent, err := FileContentFromFilePath(filePath)
+				lock.Lock()
+				defer lock.Unlock()
+				if err != nil {
+					errs = append(errs, err)
+				} else {
+					fileContents[filePath] = fileContent
+				}
+			}(filePath)
+		}
 	}
 	wg.Wait()
 	return fileContents, errs
