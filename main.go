@@ -72,14 +72,15 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 	case "db":
 		return tfIndex.NewSQLiteTFIndex(dbPath)
 	case "json":
-		if subcommand == querySubCommand {
-			index, err := tfIndex.SimpleTFINdexFromJSON(dbPath)
-			if err != nil {
+		index, err := tfIndex.SimpleTFINdexFromJSON(dbPath)
+		if err != nil {
+			if subcommand == querySubCommand {
 				log.Fatalf("%s", err)
+				return index
 			}
-			return index
+			index = tfIndex.NewSimpleTFIndex()
 		}
-		return tfIndex.NewSimpleTFIndex()
+		return index
 	default:
 	}
 	fmt.Printf("Unknown extension `%s` found\n", dbPath)
