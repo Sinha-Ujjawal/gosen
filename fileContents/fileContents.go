@@ -2,7 +2,6 @@ package fileContents
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/xml"
 	"fmt"
 	"gosen/saxlike"
@@ -42,6 +41,11 @@ func readXML(filePath string) (string, error) {
 }
 
 func readPDF(path string) (string, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("panic occurred:", err)
+		}
+	}()
 	f, r, err := pdf.Open(path)
 	// remember close file
 	defer f.Close()
@@ -50,15 +54,23 @@ func readPDF(path string) (string, error) {
 		log.Default().Printf("readPDF: failed to open the file `%s`: %s!; returning with empty string\n", path, err)
 		return "", nil
 	}
-	var buf bytes.Buffer
-	b, err := r.GetPlainText()
+	rio, err := r.GetPlainText()
 	if err != nil {
 		// TODO: handle malformed pdfs
 		log.Default().Printf("readPDF: failed to get the plantext for the file `%s`: %s!; returning with empty string\n", path, err)
 		return "", nil
 	}
-	buf.ReadFrom(b)
-	return buf.String(), nil
+	reader := bufio.NewReader(rio)
+	sb := strings.Builder{}
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+	return sb.String(), nil
 }
 
 func readText(filePath string) (string, error) {
