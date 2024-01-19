@@ -160,7 +160,9 @@ func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]
 		if err != nil {
 			return nil, fmt.Errorf("SQLiteTFIndex.Query could not parse the rows into QueryResult: %w", err)
 		}
-		ret = append(ret, QueryResult{DocID: docId, Score: score})
+		if score > 0.0 {
+			ret = append(ret, QueryResult{DocID: docId, Score: score})
+		}
 	}
 	return ret, nil
 }

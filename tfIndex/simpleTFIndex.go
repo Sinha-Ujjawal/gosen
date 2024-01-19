@@ -74,7 +74,9 @@ func (simpleTFIndex SimpleTFINdex) Query(tokens []string) ([]QueryResult, error)
 			tf := simpleTFIndex.TF(docId, token)
 			tfIdf += float64(tf) * idf
 		}
-		ret = append(ret, QueryResult{DocID: docId, Score: tfIdf})
+		if tfIdf > 0.0 {
+			ret = append(ret, QueryResult{DocID: docId, Score: tfIdf})
+		}
 	}
 	sort.Slice(ret, func(i, j int) bool { return ret[i].Score > ret[j].Score })
 	return ret, nil
