@@ -129,8 +129,13 @@ func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]
 		return nil, err
 	}
 	args := []any{}
+	seenBefore := map[string]bool{}
 	for _, token := range tokens {
+		if _, ok := seenBefore[token]; ok {
+			continue
+		}
 		args = append(args, token)
+		seenBefore[token] = true
 	}
 	query := `
 		SELECT
