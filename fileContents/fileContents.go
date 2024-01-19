@@ -2,13 +2,17 @@ package fileContents
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"gosen/saxlike"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/ledongthuc/pdf"
 )
 
 type textHandler struct {
@@ -23,23 +27,44 @@ func (h *textHandler) CharData(c xml.CharData) {
 
 func readXML(filePath string) (string, error) {
 	fp, err := os.Open(filePath)
+	defer fp.Close()
 	if err != nil {
-		return "", fmt.Errorf("ReadXML: failed reading the filePath %s: %w", filePath, err)
+		return "", fmt.Errorf("readXML: failed reading the filePath %s: %w", filePath, err)
 	}
 	reader := bufio.NewReader(fp)
 	handler := &textHandler{}
 	parser := saxlike.NewParser(reader, handler)
 	err = parser.Parse()
 	if err != nil {
-		return "", fmt.Errorf("ReadXML: failed parsing the file %s using saxlike: %w", filePath, err)
+		return "", fmt.Errorf("readXML: failed parsing the file %s using saxlike: %w", filePath, err)
 	}
 	return handler.textDataSB.String(), nil
+}
+
+func readPDF(path string) (string, error) {
+	f, r, err := pdf.Open(path)
+	// remember close file
+	defer f.Close()
+	if err != nil {
+		// TODO: handle malformed pdfs
+		log.Default().Printf("readPDF: failed to open the file `%s`: %s!; returning with empty string\n", path, err)
+		return "", nil
+	}
+	var buf bytes.Buffer
+	b, err := r.GetPlainText()
+	if err != nil {
+		// TODO: handle malformed pdfs
+		log.Default().Printf("readPDF: failed to get the plantext for the file `%s`: %s!; returning with empty string\n", path, err)
+		return "", nil
+	}
+	buf.ReadFrom(b)
+	return buf.String(), nil
 }
 
 func readText(filePath string) (string, error) {
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", fmt.Errorf("ReadText: failed reading the filePath %s: %w", filePath, err)
+		return "", fmt.Errorf("readText: failed reading the filePath %s: %w", filePath, err)
 	}
 	return string(bytes), nil
 }
@@ -50,6 +75,8 @@ func FromFilePath(filePath string) (string, error) {
 	switch ext {
 	case "xhtml", "html", "xml", "svg":
 		return readXML(filePath)
+	case "pdf":
+		return readPDF(filePath)
 	default:
 		return readText(filePath)
 	}
