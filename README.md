@@ -2,25 +2,33 @@
 
 Inspired by [Local Search Engine in Rust](https://github.com/tsoding/seroost) from [@tsoding](https://github.com/tsoding) made a similar project in [Golang](https://go.dev/).
 
-### TODOS
+### Getting Started
 
-1. [✅] Write code for indexing a folder containing `.xhtmls` as `TermFrequenciesIndex`
+```console
+go build -tags "sqlite_math_functions" -o <PROGRAM> .
+```
 
-2. [✅] Write code for storing the `TermFrequenciesIndex` in a file. In my case I have used [SQLite3](https://www.sqlite.org/index.html)
+### Usage
+```console
+Usage: <PROGRAM> <SUBCOMMAND> <FLAGS>
+    SUBCOMMANDS:
+        1. build
+        2. query
 
-3. [✅] Write code for loading `TermFrequenciesIndex` from the [SQLite3](https://www.sqlite.org/index.html) DB.
+Usage of build:
+  -db string
+        Path of db to store the index. Supported formats: [.db, .json] (default "index.db")
+  -dir string
+        Directory containing the files.
 
-4. [✅] Write code for answering query using the index. Have to use [TF-IDF](https://en.wikipedia.org/wiki/Tf%E2%80%93idf) algorithm for this somehow.
-
-5. [✅] Write code for adding subcommands for-
-    1. Indexing a folder and storing it in [SQLite3](https://www.sqlite.org/index.html) DB.
-    ```console
-    --index --folder --db
-    ```
-    2. Loading the index from the DB, and answer the user provided query
-    ```console
-    --query --db --search_text --top_n[Default: 10]
-    ```
+Usage of query:
+  -db string
+        Path of db to store the index. Supported formats: [.db, .json] (default "index.db")
+  -query string
+        Search query
+  -topN uint
+        Top N results to show (default 10)
+```
 
 ### References
 
