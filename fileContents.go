@@ -23,33 +23,27 @@ func (h *TextHandler) CharData(c xml.CharData) {
 	h.textDataSB.WriteString(" ")
 }
 
-// FileContent struct for storing the file path of the file as well as the content
-type FileContent struct {
-	filePath string
-	content  string
-}
-
-func FileContentFromFilePath(filePath string) (*FileContent, error) {
+func FileContentFromFilePath(filePath string) (string, error) {
 	fp, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("FileContentFromFilePath: failed reading the filePath %s: %w", filePath, err)
+		return "", fmt.Errorf("FileContentFromFilePath: failed reading the filePath %s: %w", filePath, err)
 	}
 	reader := bufio.NewReader(fp)
 	handler := &TextHandler{}
 	parser := saxlike.NewParser(reader, handler)
 	err = parser.Parse()
 	if err != nil {
-		return nil, fmt.Errorf("FileContentFromFilePath: failed parsing the file %s using saxlike: %w", filePath, err)
+		return "", fmt.Errorf("FileContentFromFilePath: failed parsing the file %s using saxlike: %w", filePath, err)
 	}
-	return &FileContent{filePath, handler.textDataSB.String()}, nil
+	return handler.textDataSB.String(), nil
 }
 
-func FileContentsFromDirectory(dirPath string) ([]FileContent, []error) {
+func FileContentsFromDirectory(dirPath string) (map[string]string, []error) {
 	files, err := filepath.Glob(dirPath + "/*/*.xhtml")
 	if err != nil {
 		return nil, []error{fmt.Errorf("FileContentsFromDirectory: failed reading .xhtml files from the directory %s: %w", dirPath, err)}
 	}
-	var fileContents []FileContent
+	fileContents := map[string]string{}
 	var errs []error
 	lock := sync.Mutex{}
 	wg := sync.WaitGroup{}
@@ -64,7 +58,7 @@ func FileContentsFromDirectory(dirPath string) ([]FileContent, []error) {
 			if err != nil {
 				errs = append(errs, err)
 			} else {
-				fileContents = append(fileContents, *fileContent)
+				fileContents[filePath] = fileContent
 			}
 		}(filePath)
 	}
