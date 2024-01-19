@@ -56,6 +56,7 @@ func usage(program string) {
 }
 
 func tokenize(text string) []string {
+	text = strings.ToUpper(strings.TrimSpace(text))
 	return tokenizer.SimpleTokenizerFromString(text).Tokens()
 }
 
