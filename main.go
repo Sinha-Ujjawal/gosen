@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"gosen/fileContents"
 	"gosen/tfIndex"
 	"gosen/tokenizer"
 	"log"
@@ -107,7 +108,7 @@ func main() {
 	case buildSubCommand:
 		buildFlagSet.Parse(os.Args)
 		defaultLogger.Printf("Reading directory `%s` contents...\n", dirPath)
-		fileContents, errs := FileContentsFromDirectory(dirPath)
+		fileContents, errs := fileContents.FromDirectory(dirPath)
 		for _, err := range errs {
 			if err != nil {
 				log.Fatalf("%s", err)
