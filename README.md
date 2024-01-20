@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./Logo.png">
+</p>
+
 ### Local Search Engine in Golang
 
 Inspired by [Local Search Engine in Rust](https://github.com/tsoding/seroost) from [@tsoding](https://github.com/tsoding) made a similar project in [Golang](https://go.dev/).
