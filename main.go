@@ -201,6 +201,15 @@ func handleIndexJS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleLogoPNG(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		serveStaticFile(w, "./Logo.png", "text/png; charset=utf-8")
+	default:
+		errWithMethodNotAllowed(w)
+	}
+}
+
 type searchRequest struct {
 	Search string `json:"search"`
 	TopN   uint   `json:"topN"`
@@ -273,6 +282,7 @@ func serve(program string) {
 	})
 	mux.HandleFunc("/index", handleIndex)
 	mux.HandleFunc("/index.js", handleIndexJS)
+	mux.HandleFunc("/logo.png", handleLogoPNG)
 	mux.HandleFunc("/api/search", func(w http.ResponseWriter, r *http.Request) {
 		handleSearch(w, r, index)
 	})
