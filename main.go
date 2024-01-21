@@ -273,6 +273,11 @@ func serve(program string) {
 	serveFlagSet.Parse(os.Args)
 	slog.Infof("Serving index: `%s`", dbPath)
 	index := mkIndex(program, querySubCommand)
+	switch index.(type) {
+	case *tfIndex.SQLiteTFIndex:
+		defer index.(*tfIndex.SQLiteTFIndex).Close()
+	default:
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.String() != "/" {

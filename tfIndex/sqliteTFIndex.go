@@ -13,10 +13,11 @@ const BatchSize = 1000
 
 type SQLiteTFIndex struct {
 	dbPath string
+	db     *sql.DB
 }
 
 func NewSQLiteTFIndex(dbPath string) *SQLiteTFIndex {
-	return &SQLiteTFIndex{dbPath}
+	return &SQLiteTFIndex{dbPath: dbPath, db: nil}
 }
 
 func (sqliteTFIndex *SQLiteTFIndex) Update(docId string, tokens []string) error {
@@ -25,20 +26,44 @@ func (sqliteTFIndex *SQLiteTFIndex) Update(docId string, tokens []string) error 
 
 func (sqliteTFIndex *SQLiteTFIndex) Connect() (*sql.DB, error) {
 	dbPath := sqliteTFIndex.dbPath
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("SQLiteTFIndex.Connect cannot connect to db %s: %w", dbPath, err)
+	if sqliteTFIndex.db == nil {
+		db, err := sql.Open("sqlite3", dbPath)
+		if err != nil {
+			return nil, fmt.Errorf("SQLiteTFIndex.Connect cannot connect to db %s: %w", dbPath, err)
+		}
+		sqliteTFIndex.db = db
 	}
-	return db, nil
+	return sqliteTFIndex.db, nil
+}
+
+func (sqliteTFIndex *SQLiteTFIndex) Close() error {
+	if sqliteTFIndex.db != nil {
+		err := sqliteTFIndex.db.Close()
+		if err != nil {
+			return fmt.Errorf("SQLiteTFIndex.Close cannot close the database connection: %w", err)
+		}
+	}
+	return nil
+}
+
+func (sqliteTFIndex *SQLiteTFIndex) Begin() (*sql.Tx, error) {
+	db, err := sqliteTFIndex.Connect()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("SQLiteTFIndex.Begin cannot begin transaction from existing connection: %w", err)
+	}
+	return tx, nil
 }
 
 func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) error {
-	db, err := sqliteTFIndex.Connect()
+	tx, err := sqliteTFIndex.Begin()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	_, err = db.Exec(`
+	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS termFrequenciesIndex (
 			filePath            STRING  NOT NULL,
 			token               TEXT    NOT NULL,
@@ -50,7 +75,7 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
 	`)
 	if err != nil {
-		return fmt.Errorf("SQLiteTFIndex.DumpToSQLite3 cannot create the table: %w", err)
+		return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot create the table: %w", err)
 	}
 	var valueStrings []string
 	var valueArgs []any
@@ -62,10 +87,10 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 			`,
 			strings.Join(valueStrings, ","),
 		)
-		_, err = db.Exec(stmt, valueArgs...)
+		_, err = tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			valueArgsAsJSON, _ := json.Marshal(valueArgs)
-			return fmt.Errorf("SQLiteTFIndex.DumpToSQLite3 cannot execute the statement `%s`, valueArgs: %s: %w", stmt, valueArgsAsJSON, err)
+			return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot execute the statement `%s`, valueArgs: %s: %w", stmt, valueArgsAsJSON, err)
 		}
 		return nil
 	}
@@ -116,9 +141,13 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 			inverseDocFrequency = LN(totalDocuments / docFrequency)
 		;
 	`
-	_, err = db.Exec(updateStats)
+	_, err = tx.Exec(updateStats)
 	if err != nil {
-		return fmt.Errorf("SQLiteTFIndex.DumpToSQLite3 cannot refresh the stats using the query `%s`: %w", updateStats, err)
+		return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot refresh the stats using the query `%s`: %w", updateStats, err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot commit the transaction: %w", err)
 	}
 	return nil
 }
@@ -126,10 +155,6 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]QueryResult, error) {
 	if len(tokens) == 0 {
 		return nil, nil
-	}
-	db, err := sqliteTFIndex.Connect()
-	if err != nil {
-		return nil, err
 	}
 	args := []any{}
 	seenBefore := map[string]bool{}
@@ -155,10 +180,14 @@ func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]
 	if topN != nil {
 		query += " LIMIT " + fmt.Sprintf("%d", *topN)
 	}
+	db, err := sqliteTFIndex.Connect()
+	if err != nil {
+		return nil, err
+	}
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		argsAsJSON, _ := json.Marshal(args)
-		return nil, fmt.Errorf("SQLiteTFIndex.Query cannot run the query `%s`, with args: %s: %w", query, argsAsJSON, err)
+		return nil, fmt.Errorf("SQLiteTFIndex.queryHelper cannot run the query `%s`, with args: %s: %w", query, argsAsJSON, err)
 	}
 	ret := []QueryResult{}
 	for rows.Next() {
@@ -166,7 +195,7 @@ func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]
 		score := 0.0
 		err := rows.Scan(&docId, &score)
 		if err != nil {
-			return nil, fmt.Errorf("SQLiteTFIndex.Query could not parse the rows into QueryResult: %w", err)
+			return nil, fmt.Errorf("SQLiteTFIndex.queryHelper could not parse the rows into QueryResult: %w", err)
 		}
 		if score > 0.0 {
 			ret = append(ret, QueryResult{DocID: docId, Score: score})
