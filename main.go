@@ -159,7 +159,7 @@ func query(program string) {
 }
 
 func setContentType(w http.ResponseWriter, contentType string) {
-	w.Header().Add("Content-Type", contentType)
+	w.Header().Set("Content-Type", contentType)
 }
 
 func serveStaticFile(w http.ResponseWriter, filePath string, contentType string) {
