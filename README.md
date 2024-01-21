@@ -14,16 +14,17 @@ go build -tags "sqlite_math_functions" -o <PROGRAM> .
 
 ### Usage
 ```console
-Usage: <PROGRAM> <SUBCOMMAND> <FLAGS>
+Usage: ./C:\Users\ujjaw\Probe\gosen\gosen.exe <SUBCOMMAND> <FLAGS>
     SUBCOMMANDS:
         1. build
         2. query
+        3. serve
 
 Usage of build:
   -db string
         Path of db to store the index. Supported formats: [.db, .json] (default "index.db")
   -dir string
-        Directory containing the files.
+        Directory containing the files
 
 Usage of query:
   -db string
@@ -32,6 +33,12 @@ Usage of query:
         Search query
   -topN uint
         Top N results to show (default 10)
+
+Usage of serve:
+  -addr string
+        Address to serve the server on (default "127.0.0.1:6969")
+  -db string
+        Path of db to store the index. Supported formats: [.db, .json] (default "index.db")
 ```
 
 ### References
