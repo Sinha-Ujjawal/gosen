@@ -40,7 +40,7 @@ func readXML(filePath string) (string, error) {
 	return handler.textDataSB.String(), nil
 }
 
-func readPDF(path string) (string, error) {
+func readPDF(path string) (string, bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			slog.Errorf("panic occurred: %s", err)
@@ -51,14 +51,14 @@ func readPDF(path string) (string, error) {
 	defer f.Close()
 	if err != nil {
 		// TODO: handle malformed pdfs
-		slog.Infof("readPDF: failed to open the file `%s`: %s!; returning with empty string", path, err)
-		return "", nil
+		slog.Errorf("readPDF: failed to open the file `%s`: %s!; returning with empty string", path, err)
+		return "", false
 	}
 	rio, err := r.GetPlainText()
 	if err != nil {
 		// TODO: handle malformed pdfs
-		slog.Infof("readPDF: failed to get the plantext for the file `%s`: %s!; returning with empty string", path, err)
-		return "", nil
+		slog.Errorf("readPDF: failed to get the plantext for the file `%s`: %s!; returning with empty string", path, err)
+		return "", false
 	}
 	reader := bufio.NewReader(rio)
 	sb := strings.Builder{}
@@ -70,7 +70,7 @@ func readPDF(path string) (string, error) {
 		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
-	return sb.String(), nil
+	return sb.String(), true
 }
 
 func readText(filePath string) (string, error) {
@@ -88,7 +88,12 @@ func FromFilePath(filePath string) (string, error) {
 	case "xhtml", "html", "xml", "svg":
 		return readXML(filePath)
 	case "pdf":
-		return readPDF(filePath)
+		text, noError := readPDF(filePath)
+		if !noError {
+			slog.Infof("FromFilePath: Unable to extract text from pdf `%s`, try reading it as plain text", filePath)
+			return readText(filePath)
+		}
+		return text, nil
 	default:
 		return readText(filePath)
 	}
