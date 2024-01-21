@@ -4,8 +4,8 @@
  * @returns HTMLSpanElement - header as a span element
  */
 function mkHeader(header) {
-    let item = document.createElement("span");
-    let boldHeader = document.createElement("strong");
+    const item = document.createElement("span");
+    const boldHeader = document.createElement("strong");
     boldHeader.appendChild(document.createTextNode(header));
     item.appendChild(boldHeader);
     item.appendChild(document.createElement("br"));
@@ -40,24 +40,37 @@ async function search(prompt, topN) {
      */
     const jsonArr = await response.json();
     results.innerHTML = "";
-    let headerNode = mkHeader(`Showing top ${Math.min(topN, jsonArr.length)} results:`);
+    const headerNode = mkHeader(`Showing top ${Math.min(topN, jsonArr.length)} results:`);
     results.appendChild(headerNode);
     for (let i = 0; i < jsonArr.length; i++) {
-        let { docId, score } = jsonArr[i];
-        let item = document.createElement("span");
+        const { docId, score } = jsonArr[i];
+        const item = document.createElement("span");
         item.appendChild(document.createTextNode(docId));
         item.appendChild(document.createElement("br"));
         results.appendChild(item);
     }
 }
 
-let query = document.getElementById("query");
-let topN = document.getElementById("topN");
-let searchButton = document.getElementById("search");
-let currentSearch = Promise.resolve()
-
-if (searchButton !== null) {
+function setup() {
+    const query = document.getElementById("query");
+    if (query === null) {
+        console.log("query element not found!");
+        return;
+    }
+    const topN = document.getElementById("topN");
+    if (topN === null) {
+        console.log("topN element not found!");
+        return;
+    }
+    const searchButton = document.getElementById("search");
+    if (searchButton === null) {
+        console.log("searchButton element not found!");
+        return;
+    }
+    const currentSearch = Promise.resolve();
     searchButton.onclick = function (e) {
         currentSearch.then(() => search(query.value, topN.value * 1));
     }
 }
+
+setup();
