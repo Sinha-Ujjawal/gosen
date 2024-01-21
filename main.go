@@ -271,6 +271,7 @@ func (l loggerMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func serve(program string) {
 	serveFlagSet.Parse(os.Args)
+	slog.Infof("Serving index: `%s`", dbPath)
 	index := mkIndex(program, querySubCommand)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
