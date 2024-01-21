@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"gosen/fileContents"
+	"gosen/slog"
 	"gosen/tfIndex"
 	"gosen/tokenizer"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -84,7 +84,7 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 	ext := parts[len(parts)-1]
 	if (subcommand == querySubCommand) || (subcommand == serveSubCommand) {
 		if _, err := os.Open(dbPath); err != nil {
-			log.Fatalf("%s", err)
+			slog.Fatal(err)
 		}
 	}
 	switch ext {
@@ -94,7 +94,7 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 		index, err := tfIndex.SimpleTFINdexFromJSON(dbPath)
 		if err != nil {
 			if (subcommand == querySubCommand) || (subcommand == serveSubCommand) {
-				log.Fatalf("%s", err)
+				slog.Fatal(err)
 				return index
 			}
 			index = tfIndex.NewSimpleTFIndex()
@@ -109,15 +109,15 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 
 func build(program string) {
 	buildFlagSet.Parse(os.Args)
-	log.Printf("Reading directory `%s` contents...\n", dirPath)
+	slog.Infof("Reading directory `%s` contents...", dirPath)
 	fileContents, errs := fileContents.FromDirectory(dirPath)
 	for _, err := range errs {
 		if err != nil {
-			log.Fatalf("%s", err)
+			slog.Fatal(err)
 		}
 	}
-	log.Println("Successfully read directory contents")
-	log.Println("Building index...")
+	slog.Info("Successfully read directory contents")
+	slog.Info("Building index...")
 	index := mkIndex(program, buildSubCommand)
 	fileTokens := map[string][]string{}
 	for filePath, fileContent := range fileContents {
@@ -125,23 +125,23 @@ func build(program string) {
 	}
 	err := index.BulkUpdate(fileTokens)
 	if err != nil {
-		log.Fatalf("%s", err)
+		slog.Fatal(err)
 	}
-	log.Println("Successfully build the index")
-	log.Printf("Saving index to `%s`...\n", dbPath)
+	slog.Info("Successfully build the index")
+	slog.Infof("Saving index to `%s`...", dbPath)
 	switch index.(type) {
 	case *tfIndex.SimpleTFINdex:
 		err := index.(*tfIndex.SimpleTFINdex).DumpToJSON(dbPath)
 		if err != nil {
-			log.Fatalf("%s", err)
+			slog.Fatal(err)
 		}
 	case *tfIndex.SQLiteTFIndex:
 		// Already saving to DB directory, when doing bulk update, hence no need to do it here
 		break
 	default:
-		log.Fatalf("Unreachable!")
+		slog.Fatal("Unreachable!")
 	}
-	log.Printf("Index saved to `%s`\n", dbPath)
+	slog.Infof("Index saved to `%s`", dbPath)
 }
 
 func query(program string) {
@@ -150,11 +150,11 @@ func query(program string) {
 	tokens := tokenize(queryString)
 	results, err := index.QueryTopN(tokens, topN)
 	if err != nil {
-		log.Fatalf("%s", err)
+		slog.Fatal(err)
 	}
-	log.Printf("Top %d results for the query: `%s`:\n", topN, queryString)
+	slog.Infof("Top %d results for the query: `%s`:", topN, queryString)
 	for _, result := range results {
-		log.Printf("Score: %.2f, Doc: `%s`\n", result.Score, result.DocID)
+		slog.Infof("Score: %.2f, Doc: `%s`", result.Score, result.DocID)
 	}
 }
 
@@ -167,11 +167,11 @@ func serveStaticFile(w http.ResponseWriter, filePath string, contentType string)
 	responseBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		responseBytes = []byte(fmt.Sprintf("Could not read the file `%s`. Please ask the server administrator to add this file\n", filePath))
-		log.Print(string(responseBytes))
+		slog.Error(string(responseBytes))
 	}
 	_, err = w.Write(responseBytes)
 	if err != nil {
-		log.Println("Could not respond back with content: ", string(responseBytes))
+		slog.Errorf("Could not respond back with content: %s", string(responseBytes))
 	}
 }
 
@@ -239,7 +239,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request, index tfIndex.TFIndex)
 		results, err := index.QueryTopN(tokens, topN)
 		if err != nil {
 			errWithInternalServerError(w)
-			log.Printf("handleSearch: error occurred while searching for the query: %s\n", err)
+			slog.Errorf("handleSearch: error occurred while searching for the query: %s", err)
 			return
 		}
 		searchResponses := []searchResponse{}
@@ -249,7 +249,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request, index tfIndex.TFIndex)
 		bytes, err := json.Marshal(searchResponses)
 		if err != nil {
 			errWithInternalServerError(w)
-			log.Printf("handleSearch: unexpected error!: %s\n", err)
+			slog.Errorf("handleSearch: unexpected error!: %s", err)
 			return
 		}
 		w.Write(bytes)
@@ -265,7 +265,7 @@ type loggerMux struct {
 func (l loggerMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	method := r.Method
-	log.Printf("Got request: %s %s\n", method, url)
+	slog.Infof("Got request: %s %s", method, url)
 	l.handler.ServeHTTP(w, r)
 }
 
@@ -287,13 +287,13 @@ func serve(program string) {
 		handleSearch(w, r, index)
 	})
 	server := loggerMux{handler: mux}
-	log.Printf("Listening on %s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, server))
+	slog.Infof("Listening on %s", addr)
+	slog.Fatal(http.ListenAndServe(addr, server))
 }
 
 func main() {
 	if len(os.Args) == 0 {
-		log.Fatalf("This is unexpected, os.Args `%+v` is empty!", os.Args)
+		slog.Fatalf("This is unexpected, os.Args `%+v` is empty!", os.Args)
 	}
 	program := os.Args[0]
 	os.Args = os.Args[1:]
