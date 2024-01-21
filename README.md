@@ -16,9 +16,10 @@ go build -tags "sqlite_math_functions" -o <PROGRAM> .
 ```console
 Usage: ./C:\Users\ujjaw\Probe\gosen\gosen.exe <SUBCOMMAND> <FLAGS>
     SUBCOMMANDS:
-        1. build
-        2. query
-        3. serve
+        - build: for building index db on documents present in a given directory
+        - query: for finding closest matching document for a given query using tf-idf
+        - serve: for serving index db on web
+        - help: see help
 
 Usage of build:
   -db string

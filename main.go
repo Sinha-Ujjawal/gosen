@@ -19,6 +19,7 @@ const (
 	buildSubCommand        = "build"
 	querySubCommand        = "query"
 	serveSubCommand        = "serve"
+	helpSubCommand         = "help"
 )
 
 var (
@@ -60,9 +61,10 @@ var (
 func usage(program string) {
 	fmt.Printf("Usage: ./%s <SUBCOMMAND> <FLAGS>\n", program)
 	fmt.Println("    SUBCOMMANDS:")
-	fmt.Printf("        1. %s\n", buildSubCommand)
-	fmt.Printf("        2. %s\n", querySubCommand)
-	fmt.Printf("        3. %s\n", serveSubCommand)
+	fmt.Printf("        - %s: for building index db on documents present in a given directory\n", buildSubCommand)
+	fmt.Printf("        - %s: for finding closest matching document for a given query using tf-idf\n", querySubCommand)
+	fmt.Printf("        - %s: for serving index db on web\n", serveSubCommand)
+	fmt.Printf("        - %s: see help\n", helpSubCommand)
 	fmt.Println()
 	buildFlagSet.Usage()
 	fmt.Println()
@@ -294,6 +296,8 @@ func main() {
 		query(program)
 	case serveSubCommand:
 		serve(program)
+	case helpSubCommand:
+		usage(program)
 	default:
 		fmt.Printf("Unknown subcommand `%s`\n", subcommand)
 		usage(program)
