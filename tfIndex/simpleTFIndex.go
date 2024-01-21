@@ -61,6 +61,9 @@ func (simpleTFINdex SimpleTFINdex) IDF(token string) float64 {
 }
 
 func (simpleTFIndex SimpleTFINdex) Query(tokens []string) ([]QueryResult, error) {
+	if len(tokens) == 0 {
+		return nil, nil
+	}
 	idfs := map[string]float64{}
 	for _, token := range tokens {
 		if _, ok := idfs[token]; !ok {

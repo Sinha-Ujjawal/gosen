@@ -124,6 +124,9 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 }
 
 func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]QueryResult, error) {
+	if len(tokens) == 0 {
+		return nil, nil
+	}
 	db, err := sqliteTFIndex.Connect()
 	if err != nil {
 		return nil, err
