@@ -74,6 +74,21 @@ func usage(program string) {
 	os.Exit(1)
 }
 
+func ngrams(token string, n uint) []string {
+	var ret []string
+	var ngram string
+	len_ := uint(len(token))
+	for i := uint(0); i < len_; i++ {
+		if i+n < len_ {
+			ngram = token[i : i+n]
+		} else {
+			ngram = token[i : len_-1]
+		}
+		ret = append(ret, ngram)
+	}
+	return ret
+}
+
 func tokenize(text string) []string {
 	t := tokenizer.SimpleTokenizerFromString(text)
 	var tokens []string
@@ -81,6 +96,8 @@ func tokenize(text string) []string {
 		token := strings.TrimSpace(strings.ToUpper(t.NextToken()))
 		if _, ok := STOPWORDS[token]; !ok {
 			tokens = append(tokens, token)
+			tokens = append(tokens, ngrams(token, 2)...)
+			tokens = append(tokens, ngrams(token, 3)...)
 		}
 	}
 	return tokens
