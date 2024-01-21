@@ -48,6 +48,8 @@ Usage of serve:
 
 2. [@tsoding's](https://github.com/tsoding) Playlist ["Search Engine in Rust"](https://youtube.com/playlist?list=PLpM-Dvs8t0VZXC-91PpIp-eAt0WF5SKEv&si=M0LhV-bsL8jHrE5t)
 
+3. [Stopwords](./stopwords.go) taken from: https://www.ranks.nl/stopwords (Long Stopword List)
+
 ### Copyrights
 
 Licensed under [@MIT](./LICENSE)

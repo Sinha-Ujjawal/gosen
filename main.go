@@ -75,8 +75,15 @@ func usage(program string) {
 }
 
 func tokenize(text string) []string {
-	text = strings.ToUpper(strings.TrimSpace(text))
-	return tokenizer.SimpleTokenizerFromString(text).Tokens()
+	t := tokenizer.SimpleTokenizerFromString(text)
+	var tokens []string
+	for t.Contains() {
+		token := strings.TrimSpace(strings.ToUpper(t.NextToken()))
+		if _, ok := STOPWORDS[token]; !ok {
+			tokens = append(tokens, token)
+		}
+	}
+	return tokens
 }
 
 func mkIndex(program string, subcommand string) tfIndex.TFIndex {
@@ -272,7 +279,7 @@ func (l loggerMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func serve(program string) {
 	serveFlagSet.Parse(os.Args)
 	slog.Infof("Serving index: `%s`", dbPath)
-	index := mkIndex(program, querySubCommand)
+	index := mkIndex(program, serveSubCommand)
 	switch index.(type) {
 	case *tfIndex.SQLiteTFIndex:
 		defer index.(*tfIndex.SQLiteTFIndex).Close()
