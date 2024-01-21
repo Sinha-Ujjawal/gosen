@@ -1,4 +1,4 @@
-/**
+/** Creates header node given a header text
  * 
  * @param {string} header - header text
  * @returns HTMLSpanElement - header as a span element
@@ -12,7 +12,7 @@ function mkHeader(header) {
     return item;
 }
 
-/**
+/** searches for a given prompt to /api/search server, and correspondingly updates the ui with the results
  * 
  * @param {string} prompt - query string
  * @param {integer} topN - top n results to show
@@ -51,6 +51,10 @@ async function search(prompt, topN) {
     }
 }
 
+/** Main setup
+ * 
+ * @returns 
+ */
 function setup() {
     const query = document.getElementById("query");
     if (query === null) {
