@@ -14,7 +14,7 @@ go build -tags "sqlite_math_functions" -o <PROGRAM> .
 
 ### Usage
 ```console
-Usage: ./C:\Users\ujjaw\Probe\gosen\gosen.exe <SUBCOMMAND> <FLAGS>
+Usage: <PROGRAM> <SUBCOMMAND> <FLAGS>
     SUBCOMMANDS:
         - build: for building index db on documents present in a given directory
         - query: for finding closest matching document for a given query using tf-idf
