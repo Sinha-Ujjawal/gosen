@@ -1,15 +1,23 @@
 <html>
-	<head>
-		<title>Gosen</title>
-        <link rel="icon" type="image/x-icon" href="logo.png">
-	</head>
-	<body>
-		<p align="center">
-            <img src="logo.png" />
-        </p>
-        <p align="center">
-            <input id="query" placeholder="Enter your query here" type="text" />
-        </p>
-        <script src="index.js"></script>
-	</body>
+
+<head>
+    <title>Gosen</title>
+    <link rel="icon" type="image/x-icon" href="logo.png">
+</head>
+
+<body>
+    <p align="center">
+        <img src="logo.png" />
+    </p>
+    <p align="center">
+        <input id="query" placeholder="Enter your query here" type="text" />
+        <button id="search">search!</button>
+    </p>
+    <p align="center">
+        <input id="topN" placeholder="Show topN results" type="number" min="1" step="1" required />
+    </p>
+    <div id="results" align="center"></div>
+    <script src="index.js"></script>
+</body>
+
 </html>
