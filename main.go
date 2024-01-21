@@ -158,8 +158,12 @@ func query(program string) {
 	}
 }
 
-func serveStaticFile(w http.ResponseWriter, filePath string, contentType string) {
+func setContentType(w http.ResponseWriter, contentType string) {
 	w.Header().Add("Content-Type", contentType)
+}
+
+func serveStaticFile(w http.ResponseWriter, filePath string, contentType string) {
+	setContentType(w, contentType)
 	responseBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		responseBytes = []byte(fmt.Sprintf("Could not read the file `%s`. Please ask the server administrator to add this file\n", filePath))
@@ -210,6 +214,7 @@ type searchResponse struct {
 func handleSearch(w http.ResponseWriter, r *http.Request, index tfIndex.TFIndex) {
 	switch r.Method {
 	case http.MethodPost:
+		setContentType(w, "application/json; charset=utf-8")
 		decoder := json.NewDecoder(r.Body)
 		var req searchRequest
 		err := decoder.Decode(&req)
