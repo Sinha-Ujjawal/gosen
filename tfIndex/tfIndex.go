@@ -5,9 +5,15 @@ type QueryResult struct {
 	Score float64
 }
 
+type DocTokens struct {
+	DocID  string
+	Tokens []string
+}
+
 type TFIndex interface {
 	Update(docId string, tokens []string) error
 	BulkUpdate(docTokens map[string][]string) error
+	BulkUpdateChan(docTokensCH <-chan DocTokens) error
 	Query(tokens []string) ([]QueryResult, error)
 	QueryTopN(tokens []string, topN uint) ([]QueryResult, error)
 }

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/ledongthuc/pdf"
 )
@@ -115,32 +114,28 @@ func listFiles(directory string) ([]string, error) {
 	return files, err
 }
 
-func FromDirectory[T any](dirPath string, processContent func(string) T) (map[string]T, []error) {
+type FileContent struct {
+	FilePath string
+	Content  string
+	Err      error
+}
+
+func FromDirectory(dirPath string, bufferSize uint) (<-chan FileContent, error) {
 	files, err := listFiles(dirPath)
 	if err != nil {
-		return nil, []error{fmt.Errorf("FromDirectory: failed reading files from the directory %s: %w", dirPath, err)}
+		return nil, fmt.Errorf("FromDirectory: failed reading files from the directory %s: %w", dirPath, err)
 	}
-	fileContents := map[string]T{}
-	var errs []error
-	lock := sync.Mutex{}
-	wg := sync.WaitGroup{}
-	for _, filePath := range files {
-		filePath, _ := filepath.Abs(filePath)
-		if fi, _ := os.Stat(filePath); fi.Mode().IsRegular() {
-			wg.Add(1)
-			go func(filePath string) {
-				defer wg.Done()
+	fileContentsCh := make(chan FileContent, bufferSize)
+	go func() {
+		defer close(fileContentsCh)
+		for _, filePath := range files {
+			filePath, _ := filepath.Abs(filePath)
+			if fi, _ := os.Stat(filePath); fi.Mode().IsRegular() {
+				slog.Infof("Reading file `%s`...", filePath)
 				fileContent, err := FromFilePath(filePath)
-				lock.Lock()
-				defer lock.Unlock()
-				if err != nil {
-					errs = append(errs, err)
-				} else {
-					fileContents[filePath] = processContent(fileContent)
-				}
-			}(filePath)
+				fileContentsCh <- FileContent{FilePath: filePath, Content: fileContent, Err: err}
+			}
 		}
-	}
-	wg.Wait()
-	return fileContents, errs
+	}()
+	return fileContentsCh, nil
 }

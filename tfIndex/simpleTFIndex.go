@@ -36,6 +36,13 @@ func (simpleTFIndex *SimpleTFINdex) BulkUpdate(docTokens map[string][]string) er
 	return nil
 }
 
+func (simpleTFINdex *SimpleTFINdex) BulkUpdateChan(docTokensCH <-chan DocTokens) error {
+	for docToken := range docTokensCH {
+		simpleTFINdex.Update(docToken.DocID, docToken.Tokens)
+	}
+	return nil
+}
+
 func (simpleTFINdex SimpleTFINdex) TF(docId string, token string) uint {
 	freqMap, ok := simpleTFINdex.index[docId]
 	if !ok {

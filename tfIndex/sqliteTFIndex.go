@@ -58,7 +58,7 @@ func (sqliteTFIndex *SQLiteTFIndex) Begin() (*sql.Tx, error) {
 	return tx, nil
 }
 
-func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) error {
+func (sqliteTFIndex *SQLiteTFIndex) BulkUpdateChan(docTokensCH <-chan DocTokens) error {
 	tx, err := sqliteTFIndex.Begin()
 	if err != nil {
 		return err
@@ -94,7 +94,8 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 		}
 		return nil
 	}
-	for filePath, tokens := range docTokens {
+	for docToken := range docTokensCH {
+		filePath, tokens := docToken.DocID, docToken.Tokens
 		tf := TermFrequency(tokens)
 		for term, freq := range tf {
 			valueStrings = append(valueStrings, "(?, ?, ?)")
@@ -150,6 +151,17 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) er
 		return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot commit the transaction: %w", err)
 	}
 	return nil
+}
+
+func (sqliteTFIndex *SQLiteTFIndex) BulkUpdate(docTokens map[string][]string) error {
+	docTokensCh := make(chan DocTokens)
+	go func() {
+		for DocId, Tokens := range docTokens {
+			docTokensCh <- DocTokens{DocId, Tokens}
+		}
+		close(docTokensCh)
+	}()
+	return sqliteTFIndex.BulkUpdateChan(docTokensCh)
 }
 
 func (sqliteTFIndex *SQLiteTFIndex) queryHelper(tokens []string, topN *uint) ([]QueryResult, error) {

@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const fileBufferSize uint = 100
+
 const (
 	defaultDBPath   string = "index.db"
 	defaultAddr            = "127.0.0.1:6969"
@@ -133,17 +135,26 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 
 func build(program string) {
 	buildFlagSet.Parse(os.Args)
-	slog.Infof("Reading directory `%s` contents...", dirPath)
-	fileContentTokens, errs := fileContents.FromDirectory(dirPath, tokenize)
-	for _, err := range errs {
-		if err != nil {
-			slog.Fatal(err)
-		}
+	slog.Infof("Building index for directory `%s`...", dirPath)
+	fileContentsCH, err := fileContents.FromDirectory(dirPath, fileBufferSize)
+	if err != nil {
+		slog.Fatal(err)
 	}
-	slog.Info("Successfully read directory contents")
-	slog.Info("Building index...")
+	fileTokensCH := make(chan tfIndex.DocTokens, fileBufferSize)
+	go func() {
+		defer close(fileTokensCH)
+		for fileContent := range fileContentsCH {
+			if fileContent.Err != nil {
+				slog.Errorf("build: error occurred for file `%s`: %s", fileContent.FilePath, fileContent.Err)
+				continue
+			}
+			DocID := fileContent.FilePath
+			Tokens := tokenize(fileContent.Content)
+			fileTokensCH <- tfIndex.DocTokens{DocID: DocID, Tokens: Tokens}
+		}
+	}()
 	index := mkIndex(program, buildSubCommand)
-	err := index.BulkUpdate(fileContentTokens)
+	err = index.BulkUpdateChan(fileTokensCH)
 	if err != nil {
 		slog.Fatal(err)
 	}
