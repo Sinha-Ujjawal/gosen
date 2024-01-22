@@ -94,8 +94,9 @@ func tokenize(text string) []string {
 		token := strings.TrimSpace(strings.ToUpper(t.NextToken()))
 		if _, ok := STOPWORDS[token]; !ok {
 			tokens = append(tokens, token)
-			tokens = append(tokens, ngrams(token, 2)...)
 			tokens = append(tokens, ngrams(token, 3)...)
+			tokens = append(tokens, ngrams(token, 5)...)
+			tokens = append(tokens, ngrams(token, 7)...)
 		}
 	}
 	return tokens
