@@ -50,10 +50,7 @@ func (simpleTokenizer *SimpleTokenizer) NextToken() string {
 		return simpleTokenizer.ChopWhile(func(b byte) bool { return unicode.IsNumber(rune(b)) })
 	}
 	if unicode.IsLetter(rune(simpleTokenizer.content[0])) {
-		return simpleTokenizer.ChopWhile(func(b byte) bool {
-			r := rune(b)
-			return unicode.IsLetter(r) || unicode.IsNumber(r)
-		})
+		return simpleTokenizer.ChopWhile(func(b byte) bool { return unicode.IsLetter(rune(b)) })
 	}
 	return simpleTokenizer.ChopLeft(1)
 }
