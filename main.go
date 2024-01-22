@@ -80,12 +80,8 @@ func ngrams(token string, n uint) []string {
 	var ret []string
 	var ngram string
 	len_ := uint(len(token))
-	for i := uint(0); i < len_; i++ {
-		if i+n < len_ {
-			ngram = token[i : i+n]
-		} else {
-			ngram = token[i : len_-1]
-		}
+	for i := uint(0); i+n < len_; i++ {
+		ngram = token[i : i+n]
 		ret = append(ret, ngram)
 	}
 	return ret
