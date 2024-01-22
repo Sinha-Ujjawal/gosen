@@ -59,6 +59,19 @@ func (sqliteTFIndex *SQLiteTFIndex) Begin() (*sql.Tx, error) {
 }
 
 func (sqliteTFIndex *SQLiteTFIndex) BulkUpdateChan(docTokensCH <-chan DocTokens) error {
+	db, err := sqliteTFIndex.Connect()
+	if err != nil {
+		return err
+	}
+	// Set some PRAGMA options for optimization
+	_, err = db.Exec("PRAGMA synchronous = OFF")
+	if err != nil {
+		return fmt.Errorf("SQLiteTFIndex.BulkUpdateChan cannot set PRAGMA synchronous = OFF: %w", err)
+	}
+	_, err = db.Exec("PRAGMA journal_mode = MEMORY")
+	if err != nil {
+		return fmt.Errorf("SQLiteTFIndex.BulkUpdateChan cannot set PRAGMA journal_mode = MEMORY: %w", err)
+	}
 	tx, err := sqliteTFIndex.Begin()
 	if err != nil {
 		return err
@@ -73,6 +86,8 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdateChan(docTokensCH <-chan DocTokens)
 			inverseDocFrequency REAL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS ux_filePath_token ON termFrequenciesIndex(filePath, token);
+		CREATE INDEX        IF NOT EXISTS ix_filePath       ON termFrequenciesIndex(filePath);
+		CREATE INDEX        IF NOT EXISTS ix_token          ON termFrequenciesIndex(token);
 	`)
 	if err != nil {
 		return fmt.Errorf("SQLiteTFIndex.BulkUpdate cannot create the table: %w", err)
@@ -140,6 +155,9 @@ func (sqliteTFIndex *SQLiteTFIndex) BulkUpdateChan(docTokensCH <-chan DocTokens)
 		UPDATE termFrequenciesIndex
 		SET
 			inverseDocFrequency = LN(totalDocuments / docFrequency)
+		;
+		DELETE FROM termFrequenciesIndex
+		WHERE inverseDocFrequency = 0.0
 		;
 	`
 	_, err = tx.Exec(updateStats)
