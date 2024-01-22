@@ -134,7 +134,7 @@ func mkIndex(program string, subcommand string) tfIndex.TFIndex {
 func build(program string) {
 	buildFlagSet.Parse(os.Args)
 	slog.Infof("Reading directory `%s` contents...", dirPath)
-	fileContents, errs := fileContents.FromDirectory(dirPath)
+	fileContentTokens, errs := fileContents.FromDirectory(dirPath, tokenize)
 	for _, err := range errs {
 		if err != nil {
 			slog.Fatal(err)
@@ -143,11 +143,7 @@ func build(program string) {
 	slog.Info("Successfully read directory contents")
 	slog.Info("Building index...")
 	index := mkIndex(program, buildSubCommand)
-	fileTokens := map[string][]string{}
-	for filePath, fileContent := range fileContents {
-		fileTokens[filePath] = tokenize(fileContent)
-	}
-	err := index.BulkUpdate(fileTokens)
+	err := index.BulkUpdate(fileContentTokens)
 	if err != nil {
 		slog.Fatal(err)
 	}

@@ -115,12 +115,12 @@ func listFiles(directory string) ([]string, error) {
 	return files, err
 }
 
-func FromDirectory(dirPath string) (map[string]string, []error) {
+func FromDirectory[T any](dirPath string, processContent func(string) T) (map[string]T, []error) {
 	files, err := listFiles(dirPath)
 	if err != nil {
 		return nil, []error{fmt.Errorf("FromDirectory: failed reading files from the directory %s: %w", dirPath, err)}
 	}
-	fileContents := map[string]string{}
+	fileContents := map[string]T{}
 	var errs []error
 	lock := sync.Mutex{}
 	wg := sync.WaitGroup{}
@@ -136,7 +136,7 @@ func FromDirectory(dirPath string) (map[string]string, []error) {
 				if err != nil {
 					errs = append(errs, err)
 				} else {
-					fileContents[filePath] = fileContent
+					fileContents[filePath] = processContent(fileContent)
 				}
 			}(filePath)
 		}
