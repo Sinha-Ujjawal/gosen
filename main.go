@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"gosen/fileContents"
 	"gosen/slog"
+	"gosen/stemmer"
+	"gosen/stemmer/snowball"
 	"gosen/tfIndex"
 	"gosen/tokenizer"
 	"net/http"
@@ -90,9 +92,11 @@ func ngrams(token string, n uint) []string {
 func tokenize(text string) []string {
 	t := tokenizer.SimpleTokenizerFromString(text)
 	var tokens []string
+	var stem stemmer.Stemmer = &snowball.EnglishStemmer{}
 	for t.Contains() {
-		token := strings.TrimSpace(strings.ToUpper(t.NextToken()))
+		token := strings.TrimSpace(strings.ToLower(t.NextToken()))
 		if _, ok := STOPWORDS[token]; !ok {
+			token = stem.Stem(token)
 			tokens = append(tokens, token)
 			tokens = append(tokens, ngrams(token, 3)...)
 			tokens = append(tokens, ngrams(token, 5)...)

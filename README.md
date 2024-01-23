@@ -50,6 +50,8 @@ Usage of serve:
 
 3. [Stopwords](./stopwords.go) taken from: https://www.ranks.nl/stopwords (Long Stopword List)
 
+4. [Snowball Stemmer](./stemmer/snowball/) taken from: [snowballstem/snowball](https://github.com/snowballstem/snowball). I have modified the generated code as per my need
+
 ### Copyrights
 
 Licensed under [@MIT](./LICENSE)
