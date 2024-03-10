@@ -94,7 +94,7 @@ func tokenize(text string) []string {
     var tokens []string
     var stem stemmer.Stemmer = &snowball.EnglishStemmer{}
     for t.Contains() {
-        token := strings.TrimSpace(strings.ToLower(t.NextToken()))
+        token := strings.TrimSpace(strings.ToUpper(t.NextToken()))
         if _, ok := STOPWORDS[token]; !ok {
             token = stem.Stem(token)
             tokens = append(tokens, token)
