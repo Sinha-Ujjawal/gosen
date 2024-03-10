@@ -64,11 +64,11 @@ var (
 
 func usage(program string) {
     fmt.Printf("Usage: ./%s <SUBCOMMAND> <FLAGS>\n", program)
-    fmt.Println("    SUBCOMMANDS:")
-    fmt.Printf("        - %s: for building index db on documents present in a given directory\n", buildSubCommand)
-    fmt.Printf("        - %s: for finding closest matching document for a given query using tf-idf\n", querySubCommand)
-    fmt.Printf("        - %s: for serving index db on web\n", serveSubCommand)
-    fmt.Printf("        - %s: see help\n", helpSubCommand)
+    fmt.Printf("  SUBCOMMANDS:\n")
+    fmt.Printf("    - %s: for building index db on documents present in a given directory\n", buildSubCommand)
+    fmt.Printf("    - %s: for finding closest matching document for a given query using tf-idf\n", querySubCommand)
+    fmt.Printf("    - %s: for serving index db on web\n", serveSubCommand)
+    fmt.Printf("    - %s: see help\n", helpSubCommand)
     fmt.Println()
     buildFlagSet.Usage()
     fmt.Println()

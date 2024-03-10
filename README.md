@@ -15,11 +15,11 @@ go build -tags "sqlite_math_functions" -o <PROGRAM> .
 ### Usage
 ```console
 Usage: <PROGRAM> <SUBCOMMAND> <FLAGS>
-    SUBCOMMANDS:
-        - build: for building index db on documents present in a given directory
-        - query: for finding closest matching document for a given query using tf-idf
-        - serve: for serving index db on web
-        - help: see help
+  SUBCOMMANDS:
+    - build: for building index db on documents present in a given directory
+    - query: for finding closest matching document for a given query using tf-idf
+    - serve: for serving index db on web
+    - help: see help
 
 Usage of build:
   -db string
