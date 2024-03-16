@@ -1,29 +1,29 @@
 package saxlike
 
 import (
-    "encoding/xml"
+	"encoding/xml"
 )
 
 // SAX-like handler
 type Handler interface {
-    //called when XML document start
-    StartDocument()
-    //called when XML document end
-    EndDocument()
-    //called when XML tag start
-    StartElement(xml.StartElement)
-    //called when XML tag end
-    EndElement(xml.EndElement)
-    //called when the parser encount chardata
-    CharData(xml.CharData)
-    //called when the parser encount comment
-    Comment(xml.Comment)
-    //called when the parser encount procInst
-    //<!procinst >
-    ProcInst(xml.ProcInst)
-    //called when the parser encount directive
-    //
-    Directive(xml.Directive)
+	//called when XML document start
+	StartDocument()
+	//called when XML document end
+	EndDocument()
+	//called when XML tag start
+	StartElement(xml.StartElement)
+	//called when XML tag end
+	EndElement(xml.EndElement)
+	//called when the parser encount chardata
+	CharData(xml.CharData)
+	//called when the parser encount comment
+	Comment(xml.Comment)
+	//called when the parser encount procInst
+	//<!procinst >
+	ProcInst(xml.ProcInst)
+	//called when the parser encount directive
+	//
+	Directive(xml.Directive)
 }
 
 //VoidHandler is a implemented Handler
